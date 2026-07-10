@@ -151,8 +151,12 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
                 }
 
                 if (response.getStatus() == Status.SENT) {
-                    health.recordSuccess(i);
-                    if (logger.isDebugEnabled()) {
+                    boolean recovered = health.recordSuccess(i);
+                    if (recovered) {
+                        // DOWN -> UP: log once, at WARN, so operators see the endpoint come back.
+                        logger.warn("[tcpmulti] endpoint[" + i + "] " + describe(ep) + " RECOVERED on "
+                                + getDestinationName() + "; resuming normal delivery.");
+                    } else if (logger.isDebugEnabled()) {
                         logger.debug("[tcpmulti] sent via endpoint[" + i + "] " + describe(ep) + " on "
                                 + getDestinationName() + ".");
                     }
@@ -160,15 +164,26 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
                 }
 
                 if (FailureClassifier.isConnectPhaseFailure(response)) {
-                    health.recordFailure(i, now);
+                    boolean nowDown = health.recordFailure(i, now);
                     lastConnectFailure = response;
                     if (props.getStrategy() == Strategy.STICKY) {
                         // STICKY runs single-threaded (enforced), so a plain clear is correct and
                         // avoids AtomicReference's identity-based CAS on boxed Integers.
                         stickyCurrent.set(null);
                     }
-                    logger.warn("[tcpmulti] connect-phase failure on endpoint[" + i + "] " + describe(ep)
-                            + " -> failing over. (" + summarize(response) + ")");
+                    if (nowDown) {
+                        // UP -> DOWN transition: log once, at WARN. Per-message failovers on an
+                        // already-down endpoint stay at DEBUG so a sustained outage under load can't
+                        // flood the log.
+                        logger.warn("[tcpmulti] endpoint[" + i + "] " + describe(ep)
+                                + " marked DOWN on " + getDestinationName() + " after "
+                                + health.getFailures(i) + " connect failure(s); failing over. ("
+                                + summarize(response) + ")");
+                    } else if (logger.isDebugEnabled()) {
+                        logger.debug("[tcpmulti] connect-phase failure on endpoint[" + i + "] "
+                                + describe(ep) + " (already down) -> failing over. ("
+                                + summarize(response) + ")");
+                    }
                     continue;
                 }
 

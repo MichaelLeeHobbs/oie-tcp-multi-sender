@@ -47,6 +47,27 @@ class HealthRegistryTest {
     }
 
     @Test
+    void recordFailure_reportsDownTransitionOnceAtThreshold() {
+        HealthRegistry h = new HealthRegistry(1, 3, 30_000L);
+        assertFalse(h.recordFailure(0, 0L), "1st failure (below threshold) is not a DOWN transition");
+        assertFalse(h.recordFailure(0, 0L), "2nd failure (below threshold) is not a DOWN transition");
+        assertTrue(h.recordFailure(0, 0L), "3rd failure crosses the threshold -> DOWN transition");
+        assertFalse(h.recordFailure(0, 0L), "4th failure on an already-down endpoint is not a transition");
+    }
+
+    @Test
+    void recordSuccess_reportsRecoveryOnlyFromDown() {
+        HealthRegistry h = new HealthRegistry(1, 2, 30_000L);
+        assertFalse(h.recordSuccess(0), "success on a healthy endpoint is not a recovery");
+        h.recordFailure(0, 0L);
+        assertFalse(h.recordSuccess(0), "success after a sub-threshold failure is not a recovery");
+        h.recordFailure(0, 0L);
+        h.recordFailure(0, 0L); // now tripped (>= threshold 2)
+        assertTrue(h.recordSuccess(0), "success while DOWN is a recovery transition");
+        assertFalse(h.recordSuccess(0), "subsequent success (already healthy) is not a recovery");
+    }
+
+    @Test
     void beginProbe_healthyProceedsFreely() {
         HealthRegistry h = new HealthRegistry(1, 3, 30_000L);
         assertEquals(HealthRegistry.ProbeDecision.PROCEED_HEALTHY, h.beginProbe(0, 0L));

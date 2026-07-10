@@ -111,23 +111,33 @@ public class HealthRegistry implements EndpointSelector.HealthView {
         probing[index].set(false);
     }
 
-    /** Record a successful send: reset the breaker to healthy. */
-    public void recordSuccess(int index) {
-        states.set(index, HEALTHY);
+    /**
+     * Record a successful send: reset the breaker to healthy.
+     *
+     * @return {@code true} iff this success recovered a tripped breaker (the endpoint was DOWN and is
+     *         now back UP) — i.e. a state <b>transition</b> worth logging once, not per message.
+     */
+    public boolean recordSuccess(int index) {
+        State old = states.getAndSet(index, HEALTHY);
+        return old.failures >= failureThreshold;
     }
 
     /**
      * Record a (connect-phase) failure. Increments the failure count atomically; when it reaches the
      * threshold, opens the breaker for {@code cooldownMillis}. The {@code (failures, downUntil)} pair
      * is updated as one immutable unit via CAS.
+     *
+     * @return {@code true} iff this failure is the one that tripped the breaker (UP -> DOWN transition)
+     *         — a state change worth logging once, as opposed to a repeat failure on an already-down
+     *         endpoint (which returns {@code false}).
      */
-    public void recordFailure(int index, long now) {
+    public boolean recordFailure(int index, long now) {
         while (true) {
             State old = states.get(index);
             int nf = old.failures + 1;
             long downUntil = (nf >= failureThreshold) ? now + cooldownMillis : old.downUntil;
             if (states.compareAndSet(index, old, new State(nf, downUntil))) {
-                return;
+                return old.failures < failureThreshold && nf >= failureThreshold;
             }
         }
     }

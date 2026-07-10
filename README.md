@@ -41,6 +41,14 @@ These come from the transport's real behavior — not optional niceties:
   retries/failover; the "never drop, queue instead" behavior depends on the queue being on.
 - **Not cluster-safe.** Health/selection state is in-memory per engine (OIE runs single-node in practice). Do
   not deploy behind an assumption of shared cross-node state.
+- **Turn the logger up to actually see failover.** The connector logs endpoint **state transitions** at `WARN`
+  — `endpoint[i] host:port marked DOWN … failing over` and `endpoint[i] … RECOVERED` — once per transition,
+  not per message (a sustained outage under load won't flood the log; per-message failovers are `DEBUG`). But
+  OIE ships with `rootLogger = ERROR`, which suppresses these. To see them, add to `conf/log4j2.properties`:
+  ```properties
+  logger.tcpmulti.name = com.mirth.connect.connectors.tcpmulti
+  logger.tcpmulti.level = INFO
+  ```
 - **Failover latency ≈ `responseTimeout` per dead endpoint** (the engine has no separate connect timeout), so
   keep `responseTimeout` modest.
 - **With Keep-Connection-Open, set `sendTimeout > 0`** so idle sockets are reaped.
