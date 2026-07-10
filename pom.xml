@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.openintegrationengine.contrib</groupId>
+    <artifactId>oie-multi-tcp-sender</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>Multi-Endpoint TCP Sender</name>
+    <description>OIE/Mirth destination connector: a TCP Sender with a list of endpoints and a
+        selectable Failover/Sticky strategy.</description>
+
+    <modules>
+        <module>shared</module>
+        <module>server</module>
+        <module>client</module>
+        <module>package</module>
+    </modules>
+
+    <properties>
+        <revision>1.0.0</revision>
+        <!-- OIE / Mirth Connect version to compile against. Override with -Dmc.version=... in CI. -->
+        <mc.version>4.5.2</mc.version>
+        <mirthVersion>${mc.version}</mirthVersion>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>mirth-libs</id>
+            <url>https://repo.repsy.io/mvn/kpalang/mirthconnect</url>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- OIE engine artifacts (present on the server; never bundled) -->
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>mirth-server</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>donkey-server</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>mirth-client-core</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>mirth-client</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Engine-bundled third-party libs (provided; do not ship) -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.12.0</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>2.17.1</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.miglayout</groupId>
+                <artifactId>miglayout-swing</artifactId>
+                <version>4.2</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.thoughtworks.xstream</groupId>
+                <artifactId>xstream</artifactId>
+                <version>1.4.20</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Test -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <release>17</release>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <!-- Optional JAR code-signing; see docs/BUILD.md. -->
+        <profile>
+            <id>signing</id>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-jarsigner-plugin</artifactId>
+                            <version>3.0.0</version>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+    </profiles>
+</project>

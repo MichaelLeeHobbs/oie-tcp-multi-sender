@@ -1,0 +1,17 @@
+<connectorMetaData path="tcpmulti">
+	<name>TCP Sender (Multi-Endpoint)</name>
+	<author>Multi-Endpoint TCP Sender contributors</author>
+	<pluginVersion>${project.version}</pluginVersion>
+	<mirthVersion>${mirthVersion}</mirthVersion>
+	<url>https://github.com/openintegrationengine</url>
+	<description>Sends messages to a list of TCP endpoints (HA replicas of one logical destination) using a selectable Failover or Sticky strategy, reusing the stock TCP transport (MLLP, keep-alive, ACK handling, TLS).</description>
+	<clientClassName>com.mirth.connect.connectors.tcpmulti.MultiEndpointTcpSender</clientClassName>
+	<serverClassName>com.mirth.connect.connectors.tcpmulti.MultiEndpointTcpDispatcher</serverClassName>
+	<sharedClassName>com.mirth.connect.connectors.tcpmulti.MultiEndpointTcpDispatcherProperties</sharedClassName>
+	<library type="CLIENT" path="tcpmulti-client-${project.version}.jar" />
+	<library type="SHARED" path="tcpmulti-shared-${project.version}.jar" />
+	<library type="SERVER" path="tcpmulti-server-${project.version}.jar" />
+	<transformers/>
+	<protocol>TCP</protocol>
+	<type>DESTINATION</type>
+</connectorMetaData>

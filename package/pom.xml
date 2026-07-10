@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.openintegrationengine.contrib</groupId>
+        <artifactId>oie-multi-tcp-sender</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>tcpmulti-package</artifactId>
+    <packaging>pom</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.openintegrationengine.contrib</groupId>
+            <artifactId>tcpmulti-shared</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openintegrationengine.contrib</groupId>
+            <artifactId>tcpmulti-server</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openintegrationengine.contrib</groupId>
+            <artifactId>tcpmulti-client</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Copy destination.xml with ${project.version}/${mirthVersion} substitution -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-descriptor</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>resources</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copy only our three module JARs into the staging dir -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-jars</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.openintegrationengine.contrib</groupId>
+                                    <artifactId>tcpmulti-shared</artifactId>
+                                    <version>${revision}</version>
+                                    <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.openintegrationengine.contrib</groupId>
+                                    <artifactId>tcpmulti-server</artifactId>
+                                    <version>${revision}</version>
+                                    <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.openintegrationengine.contrib</groupId>
+                                    <artifactId>tcpmulti-client</artifactId>
+                                    <version>${revision}</version>
+                                    <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Optional: sign the plugin JARs (mvn ... -Psigning) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>build-zip</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>tcpmulti-${project.version}</finalName>
+                            <descriptors>
+                                <descriptor>assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>signing</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jarsigner-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-jars</id>
+                                <phase>prepare-package</phase>
+                                <goals><goal>sign</goal></goals>
+                                <configuration>
+                                    <archiveDirectory>${project.build.directory}/to-be-packed</archiveDirectory>
+                                    <includes>
+                                        <include>tcpmulti-*.jar</include>
+                                    </includes>
+                                    <keystore>${signing.keystore}</keystore>
+                                    <alias>${signing.alias}</alias>
+                                    <storepass>${signing.storepass}</storepass>
+                                    <tsa>http://timestamp.digicert.com</tsa>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

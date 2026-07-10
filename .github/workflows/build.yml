@@ -1,0 +1,45 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pin the OIE version(s) to compile + test against. This is the verification gate we cannot
+        # run locally (no Maven/OIE jars there); subclassing couples us to TcpDispatcher internals, so
+        # every supported release must be exercised here. Add versions as they are supported.
+        mc-version: [ "4.5.2" ]
+    name: build (OIE ${{ matrix.mc-version }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build, test, and package
+        run: mvn -B -ntp clean package -Dmc.version=${{ matrix.mc-version }}
+
+      # Integration scenarios need a deployed OIE; they self-skip without a harness. This step is a
+      # placeholder that keeps the switch wired. Provide -Dtcpmulti.oie.home + a running OIE to make
+      # them execute (see docs/BUILD.md).
+      - name: Integration scenarios (self-skip without harness)
+        run: mvn -B -ntp -pl server verify -Dtcpmulti.it=true -Dmc.version=${{ matrix.mc-version }}
+
+      - name: Upload extension zip
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcpmulti-${{ matrix.mc-version }}
+          path: package/target/tcpmulti-*.zip
+          if-no-files-found: error

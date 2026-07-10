@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.openintegrationengine.contrib</groupId>
+        <artifactId>oie-multi-tcp-sender</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>tcpmulti-server</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.openintegrationengine.contrib</groupId>
+            <artifactId>tcpmulti-shared</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>mirth-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>donkey-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Integration stubs are @Disabled unless -Dtcpmulti.it=true (see IT class). -->
+                    <systemPropertyVariables>
+                        <tcpmulti.it>${tcpmulti.it}</tcpmulti.it>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <properties>
+        <tcpmulti.it>false</tcpmulti.it>
+    </properties>
+</project>
