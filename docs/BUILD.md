@@ -69,7 +69,13 @@ package` is unsigned, which is correct for CI, unit tests, and the Docker smoke/
 Stock OIE signs its jars with a self-signed cert too, so a self-signed cert is enough — the Launcher just
 has to be told to accept it.
 
-**1. Generate a self-signed dev keystore (once).** Mirth requires the proprietary **JKS** format:
+**1. Generate a self-signed dev keystore (once).** Mirth uses the legacy Java **JKS** keystore format:
+
+```bash
+scripts/gen-keystore.sh        # writes certificate/keystore.jks (idempotent)
+```
+
+<details><summary>equivalent raw <code>keytool</code></summary>
 
 ```bash
 keytool -genkeypair -keyalg RSA -keysize 2048 -alias selfsigned \
@@ -77,9 +83,10 @@ keytool -genkeypair -keyalg RSA -keysize 2048 -alias selfsigned \
   -validity 3650 -storetype JKS \
   -dname "CN=OIE Multi-Endpoint TCP Sender (dev self-signed), OU=dev, O=oie-contrib, C=US"
 ```
+</details>
 
-A dev keystore is committed at `certificate/keystore.jks` (password `storepass`) so `-Psigning` works out of
-the box. It is a throwaway self-signed cert — **not** a release-signing key.
+The keystore holds a private key, so it is **gitignored — never committed**; regenerate it with the script
+on any machine. It's a throwaway self-signed cert — **not** a release-signing key.
 
 **2. Build signed** (command above).
 

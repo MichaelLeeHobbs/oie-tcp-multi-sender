@@ -8,3 +8,7 @@ target/
 # failover driver session artifacts
 test-harness/cookies.txt
 test-harness/stored.xml
+/tmp/
+
+# self-signed dev keystore — generate with scripts/gen-keystore.sh, never commit
+certificate/*.jks
