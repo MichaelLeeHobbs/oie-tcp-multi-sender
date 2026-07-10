@@ -9,6 +9,13 @@
 #   1. bring the stack up:   docker compose -f docker/oie-test.compose.yaml up -d --build
 #   2. run this driver:      test-harness/run-failover-scenarios.sh
 #
+# FIXTURE PROVENANCE — channel-failover.xml is a KNOWN-GOOD channel exported from the OIE Administrator
+# (HL7 v2.x datatype, MLLP mode), with the <list> wrapper + <exportData> stripped and the endpoint list
+# edited to sink:6661 (pri0) / sink:6662 (pri1). Do NOT regenerate it by hand-serializing the channel model:
+# OIE's `POST /api/channels` accepts a structurally-incomplete channel and it *partially* works — RAW
+# passthrough is fine, but HL7 v2.x sends the literal string "undefined" on the wire (see the tmp/ bug note).
+# To refresh: build the channel in the Administrator, export it, strip the wrapper/exportData, adjust endpoints.
+#
 # Scenarios:
 #   S1 baseline          both up            -> primary (6661) receives, 6662 idle
 #   S2 failover          6661 down          -> 6662 receives (connect-phase failover)
