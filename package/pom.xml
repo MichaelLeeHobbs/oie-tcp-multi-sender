@@ -134,7 +134,12 @@
                                     <keystore>${signing.keystore}</keystore>
                                     <alias>${signing.alias}</alias>
                                     <storepass>${signing.storepass}</storepass>
-                                    <tsa>http://timestamp.digicert.com</tsa>
+                                    <keypass>${signing.storepass}</keypass>
+                                    <!-- No <tsa>: a self-signed dev cert has no OCSP/timestamp chain to
+                                         validate, and adding one makes the Administrator Launcher do slow
+                                         (often failing) network lookups on the client. For a real release
+                                         signed with a CA cert, add -Dsigning.tsa and a <tsa> back. -->
+                                    <certs>false</certs>
                                 </configuration>
                             </execution>
                         </executions>

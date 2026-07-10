@@ -48,9 +48,49 @@ mvn clean package -DskipTests
 # Target a specific OIE version
 mvn clean package -Dmc.version=4.5.2
 
-# Optional JAR signing
-mvn clean package -Psigning -Dsigning.keystore=... -Dsigning.alias=... -Dsigning.storepass=...
+# JAR signing (required to load in the Administrator Launcher — see below)
+mvn clean package -Psigning \
+  -Dsigning.keystore=certificate/keystore.jks -Dsigning.alias=selfsigned -Dsigning.storepass=storepass
 ```
+
+## Signing for the Administrator Launcher
+
+The Mirth/OIE **Administrator Launcher** verifies that every extension jar it downloads from the server
+is code-signed. An unsigned build fails to open with:
+
+```
+Error verifying entry "META-INF/MANIFEST.MF" in JAR file tcpmulti-shared-1.0.0.jar
+… has no code signers.
+```
+
+(The **server** loads unsigned jars fine — signing only matters for the Administrator GUI. Default `mvn
+package` is unsigned, which is correct for CI, unit tests, and the Docker smoke/failover tests.)
+
+Stock OIE signs its jars with a self-signed cert too, so a self-signed cert is enough — the Launcher just
+has to be told to accept it.
+
+**1. Generate a self-signed dev keystore (once).** Mirth requires the proprietary **JKS** format:
+
+```bash
+keytool -genkeypair -keyalg RSA -keysize 2048 -alias selfsigned \
+  -keystore certificate/keystore.jks -storepass storepass -keypass storepass \
+  -validity 3650 -storetype JKS \
+  -dname "CN=OIE Multi-Endpoint TCP Sender (dev self-signed), OU=dev, O=oie-contrib, C=US"
+```
+
+A dev keystore is committed at `certificate/keystore.jks` (password `storepass`) so `-Psigning` works out of
+the box. It is a throwaway self-signed cert — **not** a release-signing key.
+
+**2. Build signed** (command above).
+
+**3. Point the Administrator Launcher at self-signed jars.** Add the `-k` (`--allow-self-signed`) flag:
+- **Windows:** append ` -k` to the *Target* field of the Administrator Launcher shortcut.
+- **macOS/Linux:** `java -jar mirth-client-launcher.jar -k`
+
+Then connect to the server and open the channel — the "TCP Sender (Multi-Endpoint)" destination will load.
+
+> For a real OIE release the connector would be signed with OIE's CA cert (add a `<tsa>` back and pass
+> `-Dsigning.keystore` pointing at that keystore); end users then need no `-k` flag.
 
 The installable artifact is **`package/target/tcpmulti-<version>.zip`**, whose internal layout is:
 
