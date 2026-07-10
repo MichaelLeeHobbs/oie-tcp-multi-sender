@@ -6,43 +6,35 @@ installable OIE **extension** zip.
 ## Prerequisites
 - **JDK 17** (the OIE server runs on Java 17)
 - **Maven 3.8+**
-- Network access to the OIE/Mirth Maven repository for the `provided`-scope engine artifacts.
+- **Docker** — the engine jars are extracted from the official OIE image (see below).
 
 ## Where the OIE jars come from
-The build resolves the engine artifacts from the community Mirth Connect repository declared in the
-root `pom.xml`:
-
-```xml
-<repository>
-  <id>mirth-libs</id>
-  <url>https://repo.repsy.io/mvn/kpalang/mirthconnect</url>
-</repository>
-```
-
-It needs these coordinates (all `provided` — never bundled):
-
-| artifact | why |
-|---|---|
-| `com.mirth.connect:mirth-server` | `TcpDispatcher`, `TcpDispatcherProperties`, `TemplateValueReplacer`, transmission-mode SPI |
-| `com.mirth.connect:donkey-server` | `DestinationConnector`, `Response`, `Status`, `ConnectorProperties`, `DonkeyElement` |
-| `com.mirth.connect:mirth-client` | `ConnectorSettingsPanel`, `Frame`, `Mirth*` Swing components |
-| `com.mirth.connect:mirth-client-core` | shared client/model types |
-
-> **Assumption to verify per release:** the stock TCP connector classes (`com.mirth.connect.connectors.tcp.*`)
-> are assumed to be inside the published `mirth-server` (and `mirth-client` for `TcpSender`) artifacts,
-> as they are in the engine's Ant build. If a given OIE release publishes the connectors as separate
-> artifacts, add those dependencies to `shared/pom.xml`, `server/pom.xml`, and `client/pom.xml`.
-
-### If the artifacts aren't in a public repo
-Build the engine yourself and install the jars locally:
+OIE/Mirth do **not** publish a complete Maven artifact set. The core jars exist on a community repo (as
+Mirth Connect 4.5.x), **but the TCP connector we subclass (`com.mirth.connect.connectors.tcp.*`) is a
+separate *extension* jar that is on no Maven repo.** So the build sources every engine jar — core **and**
+the `tcp-*` extension jars — from the official **OIE Docker image**, at the exact OIE version, into your
+local Maven repo:
 
 ```bash
-# from an OIE engine checkout (Ant build)
-mvn install:install-file -Dfile=server/mirth-server.jar   -DgroupId=com.mirth.connect -DartifactId=mirth-server      -Dversion=4.5.2 -Dpackaging=jar
-mvn install:install-file -Dfile=donkey/donkey-server.jar  -DgroupId=com.mirth.connect -DartifactId=donkey-server     -Dversion=4.5.2 -Dpackaging=jar
-mvn install:install-file -Dfile=client/mirth-client.jar   -DgroupId=com.mirth.connect -DartifactId=mirth-client      -Dversion=4.5.2 -Dpackaging=jar
-mvn install:install-file -Dfile=client/mirth-client-core.jar -DgroupId=com.mirth.connect -DartifactId=mirth-client-core -Dversion=4.5.2 -Dpackaging=jar
+scripts/install-oie-artifacts.sh openintegrationengine/engine:latest 4.5.2
+#                                 ^ image                              ^ must equal <mc.version> in pom.xml
 ```
+
+That installs, as `provided`-scope (`com.mirth.connect:<id>:<mc.version>`):
+
+| artifact | provides |
+|---|---|
+| `mirth-server` | `TemplateValueReplacer`, transmission-mode / model types |
+| `donkey-server` | `DestinationConnector`, `Response`, `Status`, `ConnectorProperties`, `DonkeyElement` |
+| `mirth-client`, `mirth-client-core` | `ConnectorSettingsPanel`, Swing/model types |
+| **`tcp-server`** | `TcpDispatcher` (our server superclass) |
+| **`tcp-shared`** | `TcpDispatcherProperties` (our properties superclass) |
+| `tcp-client` | stock TCP client panels (installed for completeness; the GUI uses the transmission-mode SPI, not this) |
+
+> If the script reports a missing jar, the image layout differs — run
+> `find <extracted>/opt/engine -name '*.jar'` and adjust the name map in the script. The community core
+> repo (`repo.repsy.io/mvn/kpalang/mirthconnect`, in `pom.xml`) is a partial fallback for the **core** jars
+> only; it does not contain the `tcp-*` extension jars.
 
 ## Build
 

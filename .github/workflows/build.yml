@@ -12,10 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Pin the OIE version(s) to compile + test against. This is the verification gate we cannot
-        # run locally (no Maven/OIE jars there); subclassing couples us to TcpDispatcher internals, so
-        # every supported release must be exercised here. Add versions as they are supported.
-        mc-version: [ "4.5.2" ]
+        # Pin the OIE Docker image (source of the engine + TCP-connector jars) and the Maven version we
+        # install them under (must equal <mc.version> in pom.xml). Subclassing couples us to TcpDispatcher
+        # internals, so exercise every supported release here. Bump the image tag + mc-version together.
+        include:
+          - mc-version: "4.5.2"
+            oie-image: "openintegrationengine/engine:latest"
     name: build (OIE ${{ matrix.mc-version }})
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +29,20 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Build, test, and package
+      # The com.mirth.connect:* jars (incl. the tcp-* extension jars we subclass) are not fully on Maven;
+      # extract them from the official OIE image into the local repo at the pinned version.
+      - name: Install OIE engine jars from the Docker image
+        run: bash scripts/install-oie-artifacts.sh "${{ matrix.oie-image }}" "${{ matrix.mc-version }}"
+
+      - name: Build, unit-test, and package
         run: mvn -B -ntp clean package -Dmc.version=${{ matrix.mc-version }}
 
-      # Integration scenarios need a deployed OIE; they self-skip without a harness. This step is a
-      # placeholder that keeps the switch wired. Provide -Dtcpmulti.oie.home + a running OIE to make
-      # them execute (see docs/BUILD.md).
+      # Real verification that the extension actually deploys: start OIE with the built zip mounted and
+      # confirm the server loads the connector without error.
+      - name: Smoke test — plugin loads in OIE
+        run: bash scripts/smoke-test.sh "${{ matrix.oie-image }}"
+
+      # Full send()-path integration scenarios; self-skip unless a harness is present (see docs/TESTING.md).
       - name: Integration scenarios (self-skip without harness)
         run: mvn -B -ntp -pl server verify -Dtcpmulti.it=true -Dmc.version=${{ matrix.mc-version }}
 

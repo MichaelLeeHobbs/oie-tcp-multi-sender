@@ -18,6 +18,16 @@
             <artifactId>tcpmulti-shared</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!-- We subclass TcpDispatcher (tcp-server) and reference TcpDispatcherProperties (tcp-shared);
+             both are extension jars installed via scripts/install-oie-artifacts.sh. -->
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>tcp-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>tcp-shared</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.mirth.connect</groupId>
             <artifactId>mirth-server</artifactId>

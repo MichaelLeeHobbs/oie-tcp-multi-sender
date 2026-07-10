@@ -30,6 +30,12 @@
         <junit.version>5.10.2</junit.version>
     </properties>
 
+    <!--
+      The build resolves the com.mirth.connect:* jars from the LOCAL repo, populated by
+      scripts/install-oie-artifacts.sh (extracts core + TCP-connector jars from the official OIE Docker
+      image at the exact OIE version). The community repo below carries the CORE jars only (as Mirth
+      Connect 4.5.x) and is kept as a partial fallback; it does NOT contain the tcp-* extension jars.
+    -->
     <repositories>
         <repository>
             <id>mirth-libs</id>
@@ -61,6 +67,28 @@
             <dependency>
                 <groupId>com.mirth.connect</groupId>
                 <artifactId>mirth-client</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- TCP connector EXTENSION jars (our superclasses TcpDispatcher / TcpDispatcherProperties /
+                 TcpSender). These are NOT published to any Maven repo — they are built as a separate
+                 extension. Populate the local repo first with: scripts/install-oie-artifacts.sh -->
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>tcp-server</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>tcp-shared</artifactId>
+                <version>${mc.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mirth.connect</groupId>
+                <artifactId>tcp-client</artifactId>
                 <version>${mc.version}</version>
                 <scope>provided</scope>
             </dependency>

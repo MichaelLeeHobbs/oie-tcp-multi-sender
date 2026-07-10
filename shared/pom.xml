@@ -13,9 +13,14 @@
     <artifactId>tcpmulti-shared</artifactId>
 
     <dependencies>
-        <!-- Our properties class extends com.mirth.connect.connectors.tcp.TcpDispatcherProperties,
-             which is compiled into the mirth-server artifact; DonkeyElement/ConnectorProperties come
-             from donkey-server. -->
+        <!-- Our properties class extends com.mirth.connect.connectors.tcp.TcpDispatcherProperties, which
+             lives in the tcp-shared EXTENSION jar (installed via scripts/install-oie-artifacts.sh);
+             DonkeyElement/ConnectorProperties come from donkey-server; TransmissionModeProperties and other
+             model types referenced by the superclass come from mirth-server. -->
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>tcp-shared</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.mirth.connect</groupId>
             <artifactId>mirth-server</artifactId>

@@ -18,6 +18,13 @@
             <artifactId>tcpmulti-shared</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!-- The panel calls inherited TcpDispatcherProperties methods, so tcp-shared must be on the
+             compile classpath (provided scope isn't transitive). No tcp-client dep: the panel uses the
+             transmission-mode SPI (com.mirth.connect.plugins/model), not the stock TcpSender panel. -->
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>tcp-shared</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.mirth.connect</groupId>
             <artifactId>mirth-client</artifactId>
