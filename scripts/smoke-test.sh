@@ -48,11 +48,13 @@ if echo "$logs" | grep -iE "tcpmulti|Multi-Endpoint" | grep -qiE "error|exceptio
   exit 1
 fi
 
-# Positive signal: the connector metadata was registered.
-if echo "$logs" | grep -qiE "tcpmulti|TCP Sender \(Multi-Endpoint\)"; then
-  echo "==> OK: OIE started and the tcpmulti extension was loaded."
+# Definitive positive check: the extension actually unpacked into the engine's extensions dir
+# (verified layout: destination.xml + the three jars under /opt/engine/extensions/tcpmulti).
+if docker exec "$NAME" sh -c 'test -f /opt/engine/extensions/tcpmulti/destination.xml'; then
+  echo "==> OK: OIE started clean and the extension unpacked to /opt/engine/extensions/tcpmulti."
+  docker exec "$NAME" sh -c 'ls -1 /opt/engine/extensions/tcpmulti' | sed 's/^/      /'
 else
-  echo "==> OIE started with no tcpmulti error, but no explicit load line was seen."
-  echo "    (Log markers vary by OIE version — verify the connector appears in the Administrator, and"
-  echo "     tighten this grep once the real log line is known.)"
+  echo "!! Extension did NOT unpack to /opt/engine/extensions/tcpmulti."
+  docker logs "$NAME" 2>&1 | tail -20
+  exit 1
 fi

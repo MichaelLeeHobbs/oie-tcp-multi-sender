@@ -41,6 +41,17 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
+        <!-- DestinationConnectorProperties (read for the STICKY queue-thread check) is in donkey. -->
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>donkey-server</artifactId>
+        </dependency>
+        <!-- Mirth's Swing components extend SwingX (MirthTable -> JXTable, Frame -> JXFrame); javac needs
+             swingx on the classpath to resolve their inherited members. Provided (bundled in OIE client-lib). -->
+        <dependency>
+            <groupId>org.swinglabs.swingx</groupId>
+            <artifactId>swingx-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.miglayout</groupId>
             <artifactId>miglayout-swing</artifactId>

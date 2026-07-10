@@ -94,10 +94,14 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
     }
 
     @Override
-    public Response send(ConnectorProperties connectorProperties, ConnectorMessage message) throws InterruptedException {
-        // Stop failing over if the connector is being halted.
+    public Response send(ConnectorProperties connectorProperties, ConnectorMessage message) {
+        // Stop failing over if the connector is being halted. TcpDispatcher.send() narrows the abstract
+        // signature and does NOT declare InterruptedException, so we cannot rethrow it from this override;
+        // instead restore the interrupt flag and return QUEUED so the engine handles the halt and the
+        // message is not lost.
         if (Thread.interrupted()) {
-            throw new InterruptedException("Multi-Endpoint TCP Sender halted before send.");
+            Thread.currentThread().interrupt();
+            return noEndpointResponse("Multi-Endpoint TCP Sender halted before send.");
         }
 
         MultiEndpointTcpDispatcherProperties props = (MultiEndpointTcpDispatcherProperties) connectorProperties;
@@ -116,7 +120,9 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
 
         for (Integer i : candidates) {
             if (Thread.interrupted()) {
-                throw new InterruptedException("Multi-Endpoint TCP Sender halted during failover.");
+                Thread.currentThread().interrupt();
+                return lastConnectFailure != null ? lastConnectFailure
+                        : noEndpointResponse("Multi-Endpoint TCP Sender halted during failover.");
             }
             // Record each endpoint's health at most once per send() (so one message's queue retries
             // can't trip the breaker N times).

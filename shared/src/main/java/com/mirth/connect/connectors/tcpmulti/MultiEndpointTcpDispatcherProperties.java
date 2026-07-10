@@ -57,6 +57,10 @@ public class MultiEndpointTcpDispatcherProperties extends TcpDispatcherPropertie
      */
     public MultiEndpointTcpDispatcherProperties(MultiEndpointTcpDispatcherProperties props) {
         super(props);
+        // Compensate for a stock defect: TcpDispatcherProperties' copy-constructor copies every field
+        // EXCEPT maxConnections, so super(props) leaves it null — a clone would silently lose the setting
+        // (and not equal the original). Preserve it explicitly.
+        setMaxConnections(props.getMaxConnections());
         this.endpoints = new ArrayList<Endpoint>();
         if (props.endpoints != null) {
             for (Endpoint ep : props.endpoints) {

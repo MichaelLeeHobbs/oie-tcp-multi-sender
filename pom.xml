@@ -112,6 +112,13 @@
                 <version>4.2</version>
                 <scope>provided</scope>
             </dependency>
+            <!-- Mirth client Swing base classes extend SwingX (bundled in OIE client-lib). -->
+            <dependency>
+                <groupId>org.swinglabs.swingx</groupId>
+                <artifactId>swingx-core</artifactId>
+                <version>1.6.2</version>
+                <scope>provided</scope>
+            </dependency>
             <dependency>
                 <groupId>com.thoughtworks.xstream</groupId>
                 <artifactId>xstream</artifactId>

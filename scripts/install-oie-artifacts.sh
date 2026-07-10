@@ -57,6 +57,22 @@ for pattern in "${!ARTIFACTS[@]}"; do
     -Dfile="$jar" -DgroupId="$GROUP" -DartifactId="$artifact" -Dversion="$MC_VERSION" -Dpackaging=jar
 done
 
+# SwingX (Mirth's client Swing base classes extend it) — bundled in client-lib, its own coordinates.
+sx="$(find "$root" -type f -name "swingx-core*.jar" | head -1 || true)"
+if [ -n "$sx" ]; then
+  echo "  -> swingx-core  <=  ${sx#$root/}"
+  # Install with an explicit minimal POM: the jar's embedded pom references a nonexistent
+  # swingx-project:1.6.2-SNAPSHOT parent, which breaks resolution. We only need the classes.
+  sxpom="$work/swingx-core.pom"
+  cat > "$sxpom" <<'POM'
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
+<groupId>org.swinglabs.swingx</groupId><artifactId>swingx-core</artifactId><version>1.6.2</version><packaging>jar</packaging></project>
+POM
+  mvn -q -B org.apache.maven.plugins:maven-install-plugin:3.1.1:install-file -Dfile="$sx" -DpomFile="$sxpom"
+else
+  echo "  !! MISSING: swingx-core*.jar"; missing=1
+fi
+
 if [ "$missing" -ne 0 ]; then
   echo ""
   echo "ERROR: one or more jars were not found. The OIE image layout may differ from the assumed names."
