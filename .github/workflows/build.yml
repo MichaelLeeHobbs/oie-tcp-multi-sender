@@ -17,7 +17,7 @@ jobs:
         # internals, so exercise every supported release here. Bump the image tag + mc-version together.
         include:
           - mc-version: "4.5.2"
-            oie-image: "openintegrationengine/engine:latest"
+            oie-image: "openintegrationengine/engine:4.5.2-alpine"
     name: build (OIE ${{ matrix.mc-version }})
     steps:
       - uses: actions/checkout@v4

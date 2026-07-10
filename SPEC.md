@@ -47,7 +47,8 @@ Verified from `TcpDispatcher.send()` response paths:
 
 **Rule:** `SENT` → success. Non-`SENT` → **only fail over to a different endpoint on a *connect-phase*
 failure** (detect via a small whitelist of pre-write signatures in `responseError`/`responseStatusMessage`:
-`ConnectException`, `"Remote address is blank"`, `"Remote port is invalid"`). **Anything else that isn't
+`ConnectException`, `"connect timed out"` (host down / SYN blackholed — not `"Read timed out"`, which is
+post-write), `"Remote address is blank"`, `"Remote port is invalid"`). **Anything else that isn't
 plainly connect-phase → do NOT move; return the `Response` unchanged** so the engine queue retries the same
 endpoint. Default-safe: if a signature isn't recognized, we *stay* (no cross-endpoint move).
 

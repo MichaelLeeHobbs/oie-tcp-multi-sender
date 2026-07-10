@@ -24,14 +24,18 @@ public final class FailureClassifier {
 
     /**
      * A connect-phase (pre-write) failure means nothing was written to the endpoint, so re-sending to
-     * a different endpoint cannot duplicate an already-delivered message. Only these signatures qualify:
+     * a different endpoint cannot duplicate an already-delivered message. These signatures qualify:
      * <ul>
-     * <li>{@code ConnectException} (connection refused)</li>
-     * <li>{@code "Remote address is blank"}</li>
-     * <li>{@code "Remote port is invalid"}</li>
+     * <li>{@code ConnectException} (connection <b>refused</b> — host up, port closed)</li>
+     * <li>a connect <b>timeout</b> (host down / SYN blackholed) — surfaces as
+     * {@code SocketTimeoutException: connect timed out}; the TCP handshake never completed, so nothing
+     * was sent. This is the common "dead node" HA case and <b>must</b> fail over.</li>
+     * <li>{@code "Remote address is blank"} / {@code "Remote port is invalid"} (misconfiguration)</li>
      * </ul>
-     * Default-safe: anything else (write/IO error, ACK-read timeout, connect <i>timeout</i> surfacing
-     * as {@code SocketTimeoutException}, unknown) returns {@code false} — do NOT move.
+     * Default-safe: anything else returns {@code false} — do NOT move. In particular an <b>ACK-read</b>
+     * timeout ({@code "Read timed out"}) is <i>post-write</i>: the message may already have been received,
+     * so the engine queue must retry the <b>same</b> endpoint rather than cross-deliver. The two timeouts
+     * are told apart by the JDK's exception message ("connect timed out" vs "Read timed out").
      *
      * <p>
      * {@code SENT} is never a failure and always returns {@code false}.
@@ -43,8 +47,13 @@ public final class FailureClassifier {
         }
         String haystack = StringUtils.defaultString(response.getError()) + "\n"
                 + StringUtils.defaultString(response.getStatusMessage());
-        return haystack.contains("ConnectException")
+        if (haystack.contains("ConnectException")
                 || haystack.contains("Remote address is blank")
-                || haystack.contains("Remote port is invalid");
+                || haystack.contains("Remote port is invalid")) {
+            return true;
+        }
+        // Connect timeout (pre-write, safe to fail over) vs. ACK-read timeout (post-write, must NOT move).
+        // Match only the connect form; "Read timed out" deliberately does not qualify.
+        return haystack.toLowerCase(java.util.Locale.ROOT).contains("connect timed out");
     }
 }

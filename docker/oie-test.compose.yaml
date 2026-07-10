@@ -7,7 +7,7 @@ name: oie-tcpmulti-test
 
 services:
   oie:
-    image: openintegrationengine/engine:latest
+    image: openintegrationengine/engine:4.5.2-alpine
     ports:
       - "8443:8443"
     volumes:

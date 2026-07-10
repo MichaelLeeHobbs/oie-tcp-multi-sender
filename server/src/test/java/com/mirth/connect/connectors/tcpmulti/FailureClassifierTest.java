@@ -58,11 +58,18 @@ class FailureClassifierTest {
     }
 
     @Test
-    void connectTimeout_isConservativelyNotFailedOver() {
-        // A connect timeout surfaces as SocketTimeoutException from the outer catch; deliberately NOT
-        // whitelisted (default-safe: never risk a cross-endpoint duplicate).
+    void connectTimeout_isConnectPhase_failsOver() {
+        // Host down / SYN blackholed: the TCP handshake never completed, so nothing was written -> safe to
+        // fail over (the common dead-node HA case). Distinct from the ACK-read timeout above by message.
+        assertTrue(FailureClassifier.isConnectPhaseFailure(
+                resp(Status.QUEUED, "Timeout connecting", "java.net.SocketTimeoutException: connect timed out")));
+    }
+
+    @Test
+    void readTimeout_notMistakenForConnectTimeout() {
+        // Guard the message discrimination: "Read timed out" must not match the "connect timed out" rule.
         assertFalse(FailureClassifier.isConnectPhaseFailure(
-                resp(Status.QUEUED, "SocketTimeoutException: connect timed out", "SocketTimeoutException: connect timed out")));
+                resp(Status.QUEUED, "Timeout waiting for response", "java.net.SocketTimeoutException: Read timed out")));
     }
 
     @Test

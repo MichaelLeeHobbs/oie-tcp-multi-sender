@@ -37,8 +37,9 @@ Subclass the stock connector — **reuse, don't fork**:
 | *(optional, later)* **Random / weighted-random** | Pick per message; no shared cursor → clustering-friendly. | Multiple connections. |
 
 ## Failure semantics (critical — corrected after review)
-- **Fail over to another endpoint ONLY on connect-phase (pre-write) failures** (connect refused, blank
-  address, invalid port). Once bytes are written, a timeout/error does **not** prove non-delivery — the
+- **Fail over to another endpoint ONLY on connect-phase (pre-write) failures** (connect refused, **connect
+  timeout / host down**, blank address, invalid port — the TCP handshake never completed, so nothing was
+  sent). Once bytes are written, a timeout/error does **not** prove non-delivery — the
   endpoint may have processed the message and only the ACK was lost. Moving *that* message to another HA
   replica = **duplicate HL7 order/result** (a patient-safety bug). So **post-write failures (ACK-read
   timeout, write/IO error) do NOT fail over** — they return unchanged and the engine queue retries the *same*
