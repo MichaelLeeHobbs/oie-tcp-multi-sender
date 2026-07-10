@@ -20,4 +20,4 @@ services:
       DATA_PORTS: "6661,6662"
       CONTROL_PORT: "9000"
     ports:
-      - "9000:9000"   # control API (the driver talks to this)
+      - "19000:9000"   # control API on host:19000 (9000 avoided — commonly used by MinIO etc.)

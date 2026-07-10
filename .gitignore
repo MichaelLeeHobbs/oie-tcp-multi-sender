@@ -4,3 +4,7 @@ target/
 .idea/
 *.iml
 .DS_Store
+
+# failover driver session artifacts
+test-harness/cookies.txt
+test-harness/stored.xml
