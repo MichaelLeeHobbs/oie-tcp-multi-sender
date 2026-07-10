@@ -85,10 +85,13 @@ guard that it isn't selected for per-session-ACK endpoints.
 
 ## Operational requirements (read before deploying)
 These come from the transport's real behavior — not optional niceties:
-- **Receivers must be idempotent / tolerate duplicates.** Delivery is at-least-once (inherent to MLLP). The
-  connector **fails over only on connect-phase failures** (nothing was written), so it never cross-delivers a
-  message that may already have been received; but the engine's normal queue retry can still redeliver to the
-  **same** endpoint after a lost ACK.
+- **Same duplicate semantics as the stock TCP Sender — no new risk.** Mirth TCP/MLLP delivery is
+  at-least-once: after a *lost ACK* the queue retries, so a receiver can see a message twice — but that's
+  equally true of the plain single-destination TCP Sender, so if your receivers already tolerate that, they
+  need nothing extra here. This plugin adds **no cross-endpoint duplication**: it **fails over only on
+  connect-phase failures** (the socket never connected, so nothing was written), and on any post-write outcome
+  (lost ACK, write/IO error) it does **not** move to another endpoint — it returns the message so the queue
+  retries the **same** endpoint, exactly as the stock connector does.
 - **Sticky requires the destination queue set to 1 thread** (otherwise the engine opens one socket per thread,
   defeating the single-connection guarantee). The connector rejects a Sticky config with >1 queue thread.
 - **Set the connector `retryCount = 0`** and **enable the destination queue** — this connector + the queue own
