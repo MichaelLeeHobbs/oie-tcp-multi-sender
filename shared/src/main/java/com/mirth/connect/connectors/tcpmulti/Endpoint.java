@@ -34,19 +34,27 @@ public class Endpoint implements Serializable {
     private String port;
     private boolean enabled;
     private int priority;
+    /** Free-text operator note (e.g. "primary DC", "vendor A"). Informational only; never affects routing. */
+    private String notes = "";
 
     public Endpoint() {
         this.host = "127.0.0.1";
         this.port = "6660";
         this.enabled = true;
         this.priority = 0;
+        this.notes = "";
     }
 
     public Endpoint(String host, String port, boolean enabled, int priority) {
+        this(host, port, enabled, priority, "");
+    }
+
+    public Endpoint(String host, String port, boolean enabled, int priority, String notes) {
         this.host = host;
         this.port = port;
         this.enabled = enabled;
         this.priority = priority;
+        this.notes = notes == null ? "" : notes;
     }
 
     /** Deep-copy constructor. Endpoint holds only immutable/scalar fields, so this is a full copy. */
@@ -55,6 +63,7 @@ public class Endpoint implements Serializable {
         this.port = other.port;
         this.enabled = other.enabled;
         this.priority = other.priority;
+        this.notes = other.notes;
     }
 
     public String getHost() {
@@ -89,6 +98,14 @@ public class Endpoint implements Serializable {
         this.priority = priority;
     }
 
+    public String getNotes() {
+        return notes == null ? "" : notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes == null ? "" : notes;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -100,12 +117,13 @@ public class Endpoint implements Serializable {
         Endpoint other = (Endpoint) obj;
         return enabled == other.enabled && priority == other.priority
                 && java.util.Objects.equals(host, other.host)
-                && java.util.Objects.equals(port, other.port);
+                && java.util.Objects.equals(port, other.port)
+                && java.util.Objects.equals(getNotes(), other.getNotes());
     }
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(host, port, enabled, priority);
+        return java.util.Objects.hash(host, port, enabled, priority, getNotes());
     }
 
     @Override

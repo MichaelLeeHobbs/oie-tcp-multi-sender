@@ -13,6 +13,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -24,15 +25,17 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.table.DefaultTableModel;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.jdesktop.swingx.decorator.HighlighterFactory;
 
 import com.mirth.connect.client.ui.Frame;
+import com.mirth.connect.client.ui.Mirth;
 import com.mirth.connect.client.ui.LoadedExtensions;
 import com.mirth.connect.client.ui.PlatformUI;
 import com.mirth.connect.client.ui.UIConstants;
@@ -65,7 +68,7 @@ import com.mirth.connect.plugins.TransmissionModePlugin;
 public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements ActionListener {
 
     private static final String[] STRATEGY_ITEMS = { Strategy.FAILOVER.name(), Strategy.STICKY.name() };
-    private static final String[] ENDPOINT_COLUMNS = { "Host", "Port", "Enabled", "Priority" };
+    private static final String[] ENDPOINT_COLUMNS = { "Host", "Port", "Enabled", "Priority", "Notes" };
 
     private final Frame parent;
 
@@ -352,7 +355,8 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
             String port = String.valueOf(getCell(row, 1, ""));
             boolean enabled = Boolean.TRUE.equals(getCell(row, 2, Boolean.TRUE));
             int priority = NumberUtils.toInt(String.valueOf(getCell(row, 3, "0")), 0);
-            endpoints.add(new Endpoint(host, port, enabled, priority));
+            String notes = String.valueOf(getCell(row, 4, ""));
+            endpoints.add(new Endpoint(host, port, enabled, priority, notes));
         }
         return endpoints;
     }
@@ -366,7 +370,7 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         endpointModel.setRowCount(0);
         if (endpoints != null) {
             for (Endpoint ep : endpoints) {
-                endpointModel.addRow(new Object[] { ep.getHost(), ep.getPort(), ep.isEnabled(), ep.getPriority() });
+                endpointModel.addRow(new Object[] { ep.getHost(), ep.getPort(), ep.isEnabled(), ep.getPriority(), ep.getNotes() });
             }
         }
     }
@@ -394,12 +398,31 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         endpointTable = new MirthTable();
         endpointTable.setModel(endpointModel);
         endpointTable.setToolTipText("<html>Destinations to send to, tried in <b>priority</b> order (lower number = higher priority; ties broken by row order).<br>"
-                + "<b>Host</b> and <b>Port</b> accept Velocity variables. Uncheck <b>Enabled</b> to keep a row on file without using it.</html>");
+                + "<b>Host</b> and <b>Port</b> accept Velocity variables. Uncheck <b>Enabled</b> to keep a row on file without using it. <b>Notes</b> is free text for operators.</html>");
+        // Match the styling of other OIE connector tables (striping, row height, single-select, no reorder).
+        endpointTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+        endpointTable.setRowHeight(UIConstants.ROW_HEIGHT);
+        endpointTable.setFocusable(true);
+        endpointTable.setSortable(false);
+        endpointTable.setOpaque(true);
+        endpointTable.setDragEnabled(false);
+        endpointTable.getTableHeader().setReorderingAllowed(false);
+        endpointTable.setShowGrid(true, true);
+        endpointTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        endpointTable.setRowSelectionAllowed(true);
+        endpointTable.setCustomEditorControls(true);
+        if (Preferences.userNodeForPackage(Mirth.class).getBoolean("highlightRows", true)) {
+            endpointTable.setHighlighters(HighlighterFactory.createAlternateStriping(UIConstants.HIGHLIGHTER_COLOR, UIConstants.BACKGROUND_COLOR));
+        }
+        // Keep the checkbox/number columns compact; Host and Notes take the remaining width.
+        endpointTable.getColumnModel().getColumn(1).setMaxWidth(90);   // Port
+        endpointTable.getColumnModel().getColumn(2).setMaxWidth(70);   // Enabled
+        endpointTable.getColumnModel().getColumn(3).setMaxWidth(70);   // Priority
 
         addButton = new JButton("Add");
         addButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
-                endpointModel.addRow(new Object[] { "127.0.0.1", "6660", Boolean.TRUE, Integer.valueOf(0) });
+                endpointModel.addRow(new Object[] { "127.0.0.1", "6660", Boolean.TRUE, Integer.valueOf(0), "" });
             }
         });
         removeButton = new JButton("Remove");
@@ -441,6 +464,8 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         ButtonGroup keepOpenGroup = new ButtonGroup();
         keepConnectionOpenYesRadio = new MirthRadioButton("Yes");
         keepConnectionOpenNoRadio = new MirthRadioButton("No");
+        keepConnectionOpenYesRadio.setBackground(Color.WHITE);
+        keepConnectionOpenNoRadio.setBackground(Color.WHITE);
         keepConnectionOpenNoRadio.setSelected(true);
         keepOpenGroup.add(keepConnectionOpenYesRadio);
         keepOpenGroup.add(keepConnectionOpenNoRadio);
@@ -454,11 +479,14 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         keepConnectionOpenNoRadio.addActionListener(keepOpenListener);
 
         ignoreResponseCheckBox = new MirthCheckBox("Ignore Response");
+        ignoreResponseCheckBox.setBackground(Color.WHITE);
         ignoreResponseCheckBox.setToolTipText("Do not wait for or process a response after sending.");
 
         ButtonGroup queueOnRtGroup = new ButtonGroup();
         queueOnResponseTimeoutYesRadio = new MirthRadioButton("Yes");
         queueOnResponseTimeoutNoRadio = new MirthRadioButton("No");
+        queueOnResponseTimeoutYesRadio.setBackground(Color.WHITE);
+        queueOnResponseTimeoutNoRadio.setBackground(Color.WHITE);
         queueOnResponseTimeoutYesRadio.setSelected(true);
         queueOnRtGroup.add(queueOnResponseTimeoutYesRadio);
         queueOnRtGroup.add(queueOnResponseTimeoutNoRadio);
@@ -469,6 +497,8 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         ButtonGroup dataTypeGroup = new ButtonGroup();
         dataTypeTextRadio = new MirthRadioButton("Text");
         dataTypeBinaryRadio = new MirthRadioButton("Binary");
+        dataTypeTextRadio.setBackground(Color.WHITE);
+        dataTypeBinaryRadio.setBackground(Color.WHITE);
         String dataTypeTip = "Text applies the encoding below; Binary sends raw bytes (Base64-decoded from the template).";
         dataTypeTextRadio.setToolTipText(dataTypeTip);
         dataTypeBinaryRadio.setToolTipText(dataTypeTip);
