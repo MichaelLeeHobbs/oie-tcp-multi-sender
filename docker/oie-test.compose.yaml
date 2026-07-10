@@ -1,7 +1,8 @@
-# Local test stack: OIE + two TCP sinks standing in for HA replicas of one destination.
-# Bring up:  docker compose -f docker/oie-test.compose.yaml up -d
-# Then deploy a channel with a "TCP Sender (Multi-Endpoint)" destination pointing at sink-a:6661 and
-# sink-b:6661, and test failover by `docker stop sink-a` (see docs/TESTING.md).
+# Local/CI test stack: OIE (with the plugin) + the controllable MLLP sink standing in for two HA replicas.
+#   docker compose -f docker/oie-test.compose.yaml up -d --build
+# Then run the failover driver (see docs/TESTING.md). The sink exposes:
+#   - MLLP on 6661 (endpoint A) and 6662 (endpoint B)
+#   - an HTTP control API on 9000 (GET /state, POST /control {port,mode,up}, POST /reset)
 name: oie-tcpmulti-test
 
 services:
@@ -10,16 +11,13 @@ services:
     ports:
       - "8443:8443"
     volumes:
-      # Auto-installs the built extension on boot (run `mvn package` first).
-      - ../package/target:/opt/engine/custom-extensions:ro
-    depends_on: [ sink-a, sink-b ]
+      - ../package/target:/opt/engine/custom-extensions:ro   # auto-installs the built plugin on boot
+    depends_on: [ sink ]
 
-  # NOTE: these socat listeners prove connectivity (so you can test connect-refused failover by stopping
-  # one), but they ECHO rather than return a real MLLP ACK. For ACK-semantics scenarios (NACK-no-failover,
-  # lost-ACK) point the endpoints at a real MLLP responder or two OIE TCP-Listener channels instead.
-  sink-a:
-    image: alpine/socat:latest
-    command: -v TCP-LISTEN:6661,fork,reuseaddr EXEC:cat
-  sink-b:
-    image: alpine/socat:latest
-    command: -v TCP-LISTEN:6661,fork,reuseaddr EXEC:cat
+  sink:
+    build: ../test-harness
+    environment:
+      DATA_PORTS: "6661,6662"
+      CONTROL_PORT: "9000"
+    ports:
+      - "9000:9000"   # control API (the driver talks to this)
