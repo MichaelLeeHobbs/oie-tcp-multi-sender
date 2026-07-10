@@ -34,23 +34,22 @@ exactly as before — you're extending your existing connector, not replacing it
 
 ### Why not just add multiple destinations to the channel?
 
-We tried this — repeatedly — and it never worked cleanly:
+You *can* build failover this way — the **response transformer** can inspect the ACK/NACK and the error to
+tell *why* a send failed (down vs. rejected message vs. transient), and the queue can drive the retries. We
+built exactly that years ago; it worked, but it was messy, and that mess is what the two problems below are
+really about. (That was pre-AI, so it's fair to say a cleaner version might be more achievable today — but
+these two don't go away):
 
-- **You can't tell *why* a destination failed.** Was it down? A malformed HL7 message? A transient blip?
-  Something else entirely? The destination just errors, and your routing logic can't distinguish "retry
-  somewhere else" from "this message is bad and will fail everywhere."
-- **The failure matrix explodes.** Queue on the first so it retries — but now what if the *second* is down?
-  What if the first recovers while the second is still down? Every combination is another edge case to handle
-  by hand, and we kept finding new ones.
-- **It gets messy fast.** Our best attempt was a code template that chose destinations, which meant the
-  **IP addresses were buried in a transformer**, plus logic in the **response transformer** to interpret the
-  results. Hidden config, logic scattered across steps — and it *still* didn't behave the way we wanted.
+- **The endpoints end up buried in code.** Choosing destinations from a transformer/code template puts the
+  **IP addresses in a script**, not in visible connector config where IT can see and change them.
+- **It's bespoke for every channel.** Each channel that needs this gets its own custom transformer +
+  response-transformer wiring to build, test, and maintain — versus just selecting **"TCP Sender
+  (Multi-Endpoint)"** from the connector dropdown and filling in a table.
 
-This plugin puts every endpoint in one visible place (the connector UI) and makes "down → try the next,
-recovered → come back" a **single, tested behavior** instead of something you re-invent per channel. It also
-**auto-fails-back** when the primary recovers and **tells you what it did** — it logs each endpoint going
-DOWN / RECOVERED and stamps which endpoint received every message (in the response and the connector map), so
-there's no black box to guess at.
+This plugin turns "down → try the next, recovered → come back" into a **single, tested behavior you
+configure**, not one you re-implement per channel. It also **auto-fails-back** when the primary recovers and
+**tells you what it did** — it logs each endpoint going DOWN / RECOVERED and stamps which endpoint received
+every message (in the response and the connector map), so there's no black box to guess at.
 
 ### Special case: PowerScribe 360 4.0 (and systems like it)
 
