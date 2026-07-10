@@ -535,6 +535,8 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
 
         add(new JLabel("Endpoints:"), "right, aligny top");
         JScrollPane scroll = new JScrollPane(endpointTable);
+        // The viewport area below the last row would otherwise show Swing's default gray; keep it white.
+        scroll.getViewport().setBackground(Color.WHITE);
         add(scroll, "growx, h 120!, split 2, sx");
         JPanel buttons = new JPanel(new MigLayout("insets 0, wrap 1, novisualpadding"));
         buttons.setBackground(Color.WHITE);
