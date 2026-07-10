@@ -89,11 +89,14 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
     private MirthTextField failureThresholdField;
     private MirthTextField cooldownField;
     private MirthTextField responseTimeoutField;
+    private JLabel sendTimeoutLabel;
     private MirthTextField sendTimeoutField;
     private MirthTextField bufferSizeField;
-    private MirthCheckBox keepConnectionOpenCheckBox;
+    private MirthRadioButton keepConnectionOpenYesRadio;
+    private MirthRadioButton keepConnectionOpenNoRadio;
     private MirthCheckBox ignoreResponseCheckBox;
-    private MirthCheckBox queueOnResponseTimeoutCheckBox;
+    private MirthRadioButton queueOnResponseTimeoutYesRadio;
+    private MirthRadioButton queueOnResponseTimeoutNoRadio;
     private MirthRadioButton dataTypeTextRadio;
     private MirthRadioButton dataTypeBinaryRadio;
     private MirthComboBox charsetEncodingComboBox;
@@ -143,9 +146,9 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         properties.setResponseTimeout(responseTimeoutField.getText());
         properties.setSendTimeout(sendTimeoutField.getText());
         properties.setBufferSize(bufferSizeField.getText());
-        properties.setKeepConnectionOpen(keepConnectionOpenCheckBox.isSelected());
+        properties.setKeepConnectionOpen(keepConnectionOpenYesRadio.isSelected());
         properties.setIgnoreResponse(ignoreResponseCheckBox.isSelected());
-        properties.setQueueOnResponseTimeout(queueOnResponseTimeoutCheckBox.isSelected());
+        properties.setQueueOnResponseTimeout(queueOnResponseTimeoutYesRadio.isSelected());
         properties.setDataTypeBinary(dataTypeBinaryRadio.isSelected());
         properties.setCharsetEncoding(parent.getSelectedEncodingForConnector(charsetEncodingComboBox));
         properties.setTemplate(templateTextArea.getText());
@@ -179,9 +182,18 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         responseTimeoutField.setText(props.getResponseTimeout());
         sendTimeoutField.setText(props.getSendTimeout());
         bufferSizeField.setText(props.getBufferSize());
-        keepConnectionOpenCheckBox.setSelected(props.isKeepConnectionOpen());
+        if (props.isKeepConnectionOpen()) {
+            keepConnectionOpenYesRadio.setSelected(true);
+        } else {
+            keepConnectionOpenNoRadio.setSelected(true);
+        }
+        keepConnectionOpenActionPerformed();
         ignoreResponseCheckBox.setSelected(props.isIgnoreResponse());
-        queueOnResponseTimeoutCheckBox.setSelected(props.isQueueOnResponseTimeout());
+        if (props.isQueueOnResponseTimeout()) {
+            queueOnResponseTimeoutYesRadio.setSelected(true);
+        } else {
+            queueOnResponseTimeoutNoRadio.setSelected(true);
+        }
 
         if (props.isDataTypeBinary()) {
             dataTypeBinaryRadio.setSelected(true);
@@ -381,6 +393,8 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         };
         endpointTable = new MirthTable();
         endpointTable.setModel(endpointModel);
+        endpointTable.setToolTipText("<html>Destinations to send to, tried in <b>priority</b> order (lower number = higher priority; ties broken by row order).<br>"
+                + "<b>Host</b> and <b>Port</b> accept Velocity variables. Uncheck <b>Enabled</b> to keep a row on file without using it.</html>");
 
         addButton = new JButton("Add");
         addButton.addActionListener(new ActionListener() {
@@ -406,21 +420,58 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
             public void actionPerformed(ActionEvent evt) { moveRow(1); }
         });
 
+        transmissionModeComboBox.setToolTipText("Framing / transmission mode. MLLP is standard for HL7 v2.x (VT … FS CR).");
+
         strategyComboBox = new JComboBox<String>(new DefaultComboBoxModel<String>(STRATEGY_ITEMS));
+        strategyComboBox.setToolTipText("<html><b>FAILOVER</b>: always use the highest-priority reachable endpoint; auto-fails back when it recovers.<br>"
+                + "<b>STICKY</b>: keep using one endpoint until it fails, then move to the next and stay (requires the destination queue set to 1 thread).</html>");
 
         failureThresholdField = new MirthTextField();
+        failureThresholdField.setToolTipText("Consecutive connect failures before an endpoint is marked down and skipped.");
         cooldownField = new MirthTextField();
+        cooldownField.setToolTipText("How long (ms) a down endpoint is skipped before a single probe is allowed. 0 = probe on every attempt.");
         responseTimeoutField = new MirthTextField();
+        responseTimeoutField.setToolTipText("<html>Milliseconds to wait for a response (ACK) before giving up.<br>"
+                + "Also the effective failover delay per unreachable endpoint — there is no separate connect timeout, so keep it modest.</html>");
         sendTimeoutField = new MirthTextField();
+        sendTimeoutField.setToolTipText("Milliseconds an idle kept-open socket stays open before it is closed. Applies only with Keep Connection Open = Yes.");
         bufferSizeField = new MirthTextField();
+        bufferSizeField.setToolTipText("Send buffer size, in bytes.");
 
-        keepConnectionOpenCheckBox = new MirthCheckBox("Keep Connection Open");
+        ButtonGroup keepOpenGroup = new ButtonGroup();
+        keepConnectionOpenYesRadio = new MirthRadioButton("Yes");
+        keepConnectionOpenNoRadio = new MirthRadioButton("No");
+        keepConnectionOpenNoRadio.setSelected(true);
+        keepOpenGroup.add(keepConnectionOpenYesRadio);
+        keepOpenGroup.add(keepConnectionOpenNoRadio);
+        String keepOpenTip = "Reuse the socket across messages instead of reconnecting for each one.";
+        keepConnectionOpenYesRadio.setToolTipText(keepOpenTip);
+        keepConnectionOpenNoRadio.setToolTipText(keepOpenTip);
+        ActionListener keepOpenListener = new ActionListener() {
+            public void actionPerformed(ActionEvent evt) { keepConnectionOpenActionPerformed(); }
+        };
+        keepConnectionOpenYesRadio.addActionListener(keepOpenListener);
+        keepConnectionOpenNoRadio.addActionListener(keepOpenListener);
+
         ignoreResponseCheckBox = new MirthCheckBox("Ignore Response");
-        queueOnResponseTimeoutCheckBox = new MirthCheckBox("Queue on Response Timeout");
+        ignoreResponseCheckBox.setToolTipText("Do not wait for or process a response after sending.");
+
+        ButtonGroup queueOnRtGroup = new ButtonGroup();
+        queueOnResponseTimeoutYesRadio = new MirthRadioButton("Yes");
+        queueOnResponseTimeoutNoRadio = new MirthRadioButton("No");
+        queueOnResponseTimeoutYesRadio.setSelected(true);
+        queueOnRtGroup.add(queueOnResponseTimeoutYesRadio);
+        queueOnRtGroup.add(queueOnResponseTimeoutNoRadio);
+        String queueRtTip = "If a response times out, queue the message for retry instead of erroring it.";
+        queueOnResponseTimeoutYesRadio.setToolTipText(queueRtTip);
+        queueOnResponseTimeoutNoRadio.setToolTipText(queueRtTip);
 
         ButtonGroup dataTypeGroup = new ButtonGroup();
         dataTypeTextRadio = new MirthRadioButton("Text");
         dataTypeBinaryRadio = new MirthRadioButton("Binary");
+        String dataTypeTip = "Text applies the encoding below; Binary sends raw bytes (Base64-decoded from the template).";
+        dataTypeTextRadio.setToolTipText(dataTypeTip);
+        dataTypeBinaryRadio.setToolTipText(dataTypeTip);
         dataTypeTextRadio.setSelected(true);
         dataTypeGroup.add(dataTypeTextRadio);
         dataTypeGroup.add(dataTypeBinaryRadio);
@@ -432,8 +483,12 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
 
         charsetEncodingLabel = new JLabel("Encoding:");
         charsetEncodingComboBox = new MirthComboBox();
+        charsetEncodingComboBox.setToolTipText("Character encoding used when Data Type = Text.");
+
+        sendTimeoutLabel = new JLabel("Send Timeout (ms):");
 
         templateTextArea = new MirthSyntaxTextArea();
+        templateTextArea.setToolTipText("The message content to send. Supports Velocity; default ${message.encodedData}.");
         templateTextArea.setBorder(BorderFactory.createEtchedBorder());
     }
 
@@ -466,17 +521,20 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         add(new JLabel("Cooldown (ms):"), "right");
         add(cooldownField, "w 100!, wrap");
 
-        add(new JLabel("Response Timeout (ms):"), "right");
-        add(responseTimeoutField, "w 75!, wrap");
-        add(new JLabel("Send Timeout (ms):"), "right");
+        // Inherited TCP transport fields — laid out in the same order/style as the stock TCP Sender.
+        add(new JLabel("Keep Connection Open:"), "right");
+        add(keepConnectionOpenYesRadio, "split 2");
+        add(keepConnectionOpenNoRadio, "wrap");
+        add(sendTimeoutLabel, "right");
         add(sendTimeoutField, "w 75!, wrap");
         add(new JLabel("Buffer Size (bytes):"), "right");
         add(bufferSizeField, "w 75!, wrap");
-
-        add(new JLabel(""), "right");
-        add(keepConnectionOpenCheckBox, "split 3");
-        add(ignoreResponseCheckBox);
-        add(queueOnResponseTimeoutCheckBox, "wrap");
+        add(new JLabel("Response Timeout (ms):"), "right");
+        add(responseTimeoutField, "w 75!, split 2");
+        add(ignoreResponseCheckBox, "gapbefore 8, wrap");
+        add(new JLabel("Queue on Response Timeout:"), "right");
+        add(queueOnResponseTimeoutYesRadio, "split 2");
+        add(queueOnResponseTimeoutNoRadio, "wrap");
 
         add(new JLabel("Data Type:"), "right");
         add(dataTypeTextRadio, "split 2");
@@ -507,6 +565,13 @@ public class MultiEndpointTcpSender extends ConnectorSettingsPanel implements Ac
         boolean text = dataTypeTextRadio.isSelected();
         charsetEncodingLabel.setEnabled(text);
         charsetEncodingComboBox.setEnabled(text);
+    }
+
+    private void keepConnectionOpenActionPerformed() {
+        // Send Timeout only reaps idle *kept-open* sockets, so gray it out otherwise (matches stock TCP).
+        boolean keepOpen = keepConnectionOpenYesRadio.isSelected();
+        sendTimeoutLabel.setEnabled(keepOpen);
+        sendTimeoutField.setEnabled(keepOpen);
     }
 
     private void transmissionModeComboBoxActionPerformed() {

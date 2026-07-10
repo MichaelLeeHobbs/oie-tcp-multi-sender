@@ -160,6 +160,10 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
                         logger.debug("[tcpmulti] sent via endpoint[" + i + "] " + describe(ep) + " on "
                                 + getDestinationName() + ".");
                     }
+                    // Record which endpoint actually received the message: append it to the response's
+                    // status message (shown in the message browser's Response view as
+                    // "SENT: <msg> [sent to host:port]") and expose it on the connector map for mapping.
+                    annotateEndpoint(response, message, ep);
                     return response;
                 }
 
@@ -211,6 +215,29 @@ public class MultiEndpointTcpDispatcher extends TcpDispatcher {
 
     private Response noEndpointResponse(String message) {
         return Responses.noEndpoint(isQueueEnabled(), message);
+    }
+
+    /** Connector-map key carrying the host:port that actually received the message. */
+    static final String ENDPOINT_MAP_KEY = "tcpmultiEndpoint";
+
+    /**
+     * Stamp a successful response with the endpoint that received it, so operators can see it without
+     * guessing: appended to the status message (visible in the Response view) and put on the connector
+     * map (mappable / visible in the Connector Map view).
+     */
+    private void annotateEndpoint(Response response, ConnectorMessage message, Endpoint ep) {
+        String where = describe(ep);
+        String sm = StringUtils.defaultIfBlank(response.getStatusMessage(), "Message successfully sent.");
+        if (!sm.contains(where)) {
+            response.setStatusMessage(sm + " [sent to " + where + "]");
+        }
+        try {
+            if (message != null && message.getConnectorMap() != null) {
+                message.getConnectorMap().put(ENDPOINT_MAP_KEY, where);
+            }
+        } catch (Exception ignore) {
+            // Best-effort annotation; never fail a delivered message over bookkeeping.
+        }
     }
 
     private static String describe(Endpoint ep) {

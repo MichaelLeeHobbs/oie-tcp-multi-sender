@@ -53,11 +53,18 @@ These come from the transport's real behavior — not optional niceties:
   keep `responseTimeout` modest.
 - **With Keep-Connection-Open, set `sendTimeout > 0`** so idle sockets are reaped.
 
+## Which endpoint received a message?
+On a successful send the connector records the endpoint that actually received the message, in two places:
+- the response **status message** — shown in the message browser's *Response* view as
+  `SENT: Message successfully sent. [sent to host:port]`;
+- the **connector map** key `tcpmultiEndpoint` (= `host:port`) — visible in the *Connector Map* view and
+  usable in downstream filters/transformers/mappings.
+
 ## Configuration
 An endpoint table (**host, port, enabled, priority**) + **strategy** (Failover / Sticky) + **failure
 threshold** (consecutive connect failures before an endpoint is marked down) + **cooldown** (how long it
 stays down before a single probe). All other TCP settings (transmission mode / MLLP, TLS, timeouts, queue)
-are the stock TCP sender's.
+are the stock TCP sender's. Every field has a hover tooltip in the Administrator.
 
 ## Build & install
 Maven multi-module (client / shared / server) producing an OIE **extension** (`destination.xml` + jars),
