@@ -6,8 +6,63 @@ of the stock TCP Sender's single Remote Address/Port. Built for **HA replicas of
 (e.g. an active/standby PACS/RIS pair), reusing all of the stock connector's transport (MLLP framing,
 keep-alive, ACK handling, TLS).
 
-> **Status:** v1 in development. AI-assisted and human-reviewed against the engine source; **not yet
-> compiled/tested against a running OIE** — see CI and the testing checklist before any production use.
+> **Status:** v1. Built and **live-validated against a real OIE 4.5.2 container** — all failover scenarios
+> green (baseline, connect-phase failover, auto-failback, NACK-no-failover, lost-ACK-no-cross-deliver,
+> all-down-queue-and-drain), plus 35 unit tests; signed for the Administrator Launcher. Review the testing
+> checklist before production use.
+
+## Why this plugin?
+
+**The short version:** it's by far the simplest, most convenient way to load-balance / fail over across HA
+endpoints in Mirth/OIE — with a **clean UI any IT staffer can update in seconds**. Change an IP, hit save,
+done. No config files, no redeploys, no extra infrastructure. And it's a **drop-in**: it *is* the stock TCP
+Sender plus a list of endpoints, so MLLP framing, TLS, keep-alive, ACK handling, and queueing all work
+exactly as before — you're extending your existing connector, not replacing it.
+
+### Why not nginx / HAProxy / a TCP load balancer?
+
+- **No GUI for the people who actually run it.** These are config-file tools. Updating an endpoint means
+  editing a file, committing it, pushing to git, triggering a CI/CD pipeline to build a new image, and
+  redeploying it to wherever your containers run — versus opening the channel and typing a new IP. For a
+  cutover at 2 a.m., that difference is everything.
+- **Another box to run and maintain.** A VIP/LB is one more moving part, one more failure point, one more
+  thing to patch, monitor, and reason about — in front of an engine that already speaks TCP/MLLP natively.
+- **It doesn't understand MLLP/ACK semantics.** A generic TCP balancer can't tell a delivered-and-ACKed
+  message from a dropped one — it just moves bytes. This plugin fails over **only on connect-phase failures**
+  (nothing was written), so it never re-sends a message a downstream may already have received. No duplicate
+  HL7 orders or results.
+
+### Why not just add multiple destinations to the channel?
+
+We tried this — repeatedly — and it never worked cleanly:
+
+- **You can't tell *why* a destination failed.** Was it down? A malformed HL7 message? A transient blip?
+  Something else entirely? The destination just errors, and your routing logic can't distinguish "retry
+  somewhere else" from "this message is bad and will fail everywhere."
+- **The failure matrix explodes.** Queue on the first so it retries — but now what if the *second* is down?
+  What if the first recovers while the second is still down? Every combination is another edge case to handle
+  by hand, and we kept finding new ones.
+- **It gets messy fast.** Our best attempt was a code template that chose destinations, which meant the
+  **IP addresses were buried in a transformer**, plus logic in the **response transformer** to interpret the
+  results. Hidden config, logic scattered across steps — and it *still* didn't behave the way we wanted.
+
+This plugin puts every endpoint in one visible place (the connector UI) and makes "down → try the next,
+recovered → come back" a **single, tested behavior** instead of something you re-invent per channel. It also
+**auto-fails-back** when the primary recovers and **tells you what it did** — it logs each endpoint going
+DOWN / RECOVERED and stamps which endpoint received every message (in the response and the connector map), so
+there's no black box to guess at.
+
+### Special case: PowerScribe 360 4.0 (and systems like it)
+
+PS360 4.0 has two quirks this plugin is built around:
+
+- It sends the TCP **response back to the last-connected session**, not the one that sent the message. That
+  breaks HAProxy/nginx **health checks** — the balancer's probe connection steals the ACK — and misroutes
+  responses whenever more than one connection is open.
+- It's simply **more reliable with Keep-Connection-Open** — one stable, long-lived socket.
+
+The **Sticky** strategy exists exactly for this: one endpoint, one persistent connection, no health-probing
+and no concurrent sessions to confuse it — while still failing over if that endpoint goes down.
 
 ## Strategies
 - **Failover** — endpoints ordered by `priority`; always uses the highest-priority reachable endpoint and
