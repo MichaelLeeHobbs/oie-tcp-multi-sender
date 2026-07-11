@@ -8,13 +8,13 @@ The `com.mirth.connect:*` jars — including the `tcp-*` **extension** jars we s
 Maven — are pulled from the OIE image into your local Maven repo:
 
 ```bash
-scripts/install-oie-artifacts.sh openintegrationengine/engine:latest 4.5.2   # version must match <mc.version>
-mvn clean package                                                            # -> package/target/tcpmulti-<v>.zip
+scripts/install-oie-artifacts.sh    # pinned image, derived from <mc.version>; never use a floating :latest
+mvn clean package                  # -> package/target/tcpmulti-<v>.zip
 ```
 
 ## 1. Quick smoke test (does it even load?)
 ```bash
-scripts/smoke-test.sh openintegrationengine/engine:latest
+scripts/smoke-test.sh openintegrationengine/engine:4.5.2-alpine
 ```
 Starts OIE with the built zip mounted at `/opt/engine/custom-extensions/` (the entrypoint auto-installs any
 `.zip` there on boot) and fails if the connector doesn't load. This is what CI runs.
@@ -23,7 +23,7 @@ Starts OIE with the built zip mounted at `/opt/engine/custom-extensions/` (the e
 ```bash
 docker run --name oie -d -p 8443:8443 \
   -v "$PWD/package/target":/opt/engine/custom-extensions:ro \
-  openintegrationengine/engine:latest
+  openintegrationengine/engine:4.5.2-alpine
 ```
 Open `https://localhost:8443` (accept the self-signed cert), log in (default `admin`/`admin`), add a
 destination to a channel, and choose **"TCP Sender (Multi-Endpoint)"**. Configure two endpoints, strategy

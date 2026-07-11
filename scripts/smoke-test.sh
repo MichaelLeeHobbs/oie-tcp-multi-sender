@@ -5,11 +5,14 @@
 # actually deploy" gate — it catches descriptor mistakes, classloading/whitelist failures, and missing
 # classes that unit tests can't.
 #
-# Usage: scripts/smoke-test.sh [IMAGE]   (default openintegrationengine/engine:latest)
+# Usage: scripts/smoke-test.sh [IMAGE]   (default: the pinned engine matching <mc.version>)
 # Requires: docker. Run after `mvn package` (needs package/target/tcpmulti-*.zip).
+#
+# Pinned, not :latest — extensions are gated on an exact engine version, so smoke-testing a 4.5.2 build
+# against a floating (newer) engine fails the version gate and reads as a plugin bug rather than a tag drift.
 set -euo pipefail
 
-IMAGE="${1:-openintegrationengine/engine:latest}"
+IMAGE="${1:-openintegrationengine/engine:4.5.2-alpine}"
 NAME="oie-tcpmulti-smoke"
 ZIP="$(ls package/target/tcpmulti-*.zip 2>/dev/null | head -1 || true)"
 [ -n "$ZIP" ] || { echo "ERROR: no package/target/tcpmulti-*.zip — run 'mvn package' first."; exit 1; }

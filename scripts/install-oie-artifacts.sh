@@ -8,18 +8,40 @@
 # OIE version — is the official Docker image, so we extract them from there and `install:install-file`.
 #
 # Usage:  scripts/install-oie-artifacts.sh [IMAGE] [MC_VERSION]
-#   IMAGE       default: openintegrationengine/engine:latest
 #   MC_VERSION  Maven version to install the jars under; must match <mc.version> in pom.xml (default 4.5.2)
+#   IMAGE       default: openintegrationengine/engine:<MC_VERSION>-alpine  (derived — do not use :latest)
+#
+# NEVER point this at a floating tag (:latest). The version the jars are INSTALLED AS is independent of the
+# image they're EXTRACTED FROM, so a floating tag silently installs (say) 4.6.0 jars under 4.5.2: you compile
+# against one engine's classes and ship an extension declaring compatibility with another. That surfaces as a
+# NoSuchMethodError on a real server, far from the cause. The image is derived from MC_VERSION for that reason,
+# and the extracted tree's own version marker is verified below regardless of what the tag claims.
 #
 # Requires: docker, mvn, (java 17).
 set -euo pipefail
 
-IMAGE="${1:-openintegrationengine/engine:latest}"
 MC_VERSION="${2:-4.5.2}"
+IMAGE="${1:-openintegrationengine/engine:${MC_VERSION}-alpine}"
 GROUP="com.mirth.connect"
 
 echo "==> Extracting OIE jars from image: $IMAGE  (installing as $GROUP:*:$MC_VERSION)"
 docker pull "$IMAGE"
+
+# The engine states its own version in conf/mirth.properties. Trust that, not the image tag: installing jars
+# under a version they aren't is the one failure this script must never produce (see the header). Checked
+# before extraction so a mismatch fails fast.
+img_version="$(docker run --rm --entrypoint sh "$IMAGE" -c \
+  'sed -n "s/^version *= *//p" /opt/engine/conf/mirth.properties' | tr -d '[:space:]')"
+if [ -z "$img_version" ]; then
+  echo "ERROR: could not read 'version' from /opt/engine/conf/mirth.properties in $IMAGE; refusing to guess."; exit 1
+fi
+if [ "$img_version" != "$MC_VERSION" ]; then
+  echo "ERROR: version mismatch — $IMAGE contains OIE $img_version, but the jars would be installed as $MC_VERSION."
+  echo "       Compiling against $img_version while declaring $MC_VERSION yields a NoSuchMethodError at runtime."
+  echo "       Use the image for $MC_VERSION, or pass MC_VERSION=$img_version and set <mc.version> in pom.xml to match."
+  exit 1
+fi
+echo "==> Verified image contains OIE $img_version (matches mc.version)"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

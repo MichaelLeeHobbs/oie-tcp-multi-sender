@@ -16,9 +16,16 @@ the `tcp-*` extension jars — from the official **OIE Docker image**, at the ex
 local Maven repo:
 
 ```bash
-scripts/install-oie-artifacts.sh openintegrationengine/engine:latest 4.5.2
-#                                 ^ image                              ^ must equal <mc.version> in pom.xml
+scripts/install-oie-artifacts.sh                                     # image derived from the version below
+scripts/install-oie-artifacts.sh openintegrationengine/engine:4.5.2-alpine 4.5.2   # ...or state both
+#                                 ^ pinned image                              ^ must equal <mc.version> in pom.xml
 ```
+
+**Never pass a floating tag (`:latest`).** The version the jars are *installed as* is independent of the image
+they're *extracted from*, so `:latest` can silently install a newer engine's jars under `4.5.2` — you compile
+against one engine and ship an extension declaring another, which surfaces as a `NoSuchMethodError` on a real
+server, far from the cause. The script now derives the image from the version and hard-fails if the image's own
+`conf/mirth.properties` version disagrees, so this can't happen by accident.
 
 That installs, as `provided`-scope (`com.mirth.connect:<id>:<mc.version>`):
 
