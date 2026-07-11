@@ -7,7 +7,9 @@ name: oie-tcpmulti-test
 
 services:
   oie:
-    image: openintegrationengine/engine:4.5.2-alpine
+    # Pinned by digest (= openintegrationengine/engine:4.5.2-alpine). A tag is a mutable pointer, so a
+    # tag-pinned stack can silently change engines between runs and turn a behavior test into a coin flip.
+    image: openintegrationengine/engine@sha256:1981539a81253861a965aeadd3bbf37ae3980088e7351abb6cf7d3f9971dfb78
     ports:
       - "8443:8443"
     volumes:

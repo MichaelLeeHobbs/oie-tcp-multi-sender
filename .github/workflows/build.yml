@@ -14,10 +14,16 @@ jobs:
       matrix:
         # Pin the OIE Docker image (source of the engine + TCP-connector jars) and the Maven version we
         # install them under (must equal <mc.version> in pom.xml). Subclassing couples us to TcpDispatcher
-        # internals, so exercise every supported release here. Bump the image tag + mc-version together.
+        # internals, so exercise every supported release here. Bump the digest + mc-version together.
+        #
+        # Pinned by DIGEST, not tag: a tag is a mutable pointer (even a version tag can be re-pushed), so a
+        # tag-pinned CI is not reproducible and can silently change the engine under a green build. The digest
+        # is the image's content address. install-oie-artifacts.sh independently verifies that the engine
+        # inside it really is <mc-version> before installing anything.
         include:
           - mc-version: "4.5.2"
-            oie-image: "openintegrationengine/engine:4.5.2-alpine"
+            # openintegrationengine/engine:4.5.2-alpine
+            oie-image: "openintegrationengine/engine@sha256:1981539a81253861a965aeadd3bbf37ae3980088e7351abb6cf7d3f9971dfb78"
     name: build (OIE ${{ matrix.mc-version }})
     steps:
       - uses: actions/checkout@v4

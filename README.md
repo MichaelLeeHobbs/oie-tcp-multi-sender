@@ -6,9 +6,15 @@ selectable strategy, instead of the stock TCP Sender's single Remote Address/Por
 the stock TCP Sender — MLLP framing, keep-alive, ACK handling, and queueing are unchanged — and adds the
 endpoint list, failover/failback, and a per-endpoint health circuit-breaker.
 
-**Compatibility:** built and tested against **OIE 4.5.2**. Mirth/OIE gate extensions on an exact engine
-version, so this build loads only on 4.5.2; rebuild against another engine's artifacts to target it (see
-[`docs/BUILD.md`](docs/BUILD.md)).
+**Compatibility:** built and tested against **OIE 4.5.2** — and *only* 4.5.2. Mirth/OIE gate extensions on an
+exact engine version, so this build will not load on any other; to target another engine, rebuild against its
+artifacts (see [`docs/BUILD.md`](docs/BUILD.md)).
+
+> **4.6.0 is untested.** OIE 4.6.0 exists upstream and replaced the engine's Ant build with Gradle. This
+> connector has not been built or run against it, and 4.6.0 is not yet published as a Docker image — which is
+> what the build extracts engine jars from — so there is currently no supported path to target it. Treat 4.6.0
+> as unsupported until this note says otherwise. CI and the test stack pin the engine image by **digest**
+> rather than a tag, since even a version tag is a mutable pointer — see [`docs/BUILD.md`](docs/BUILD.md).
 
 ## When to use it
 - You have **2+ interchangeable endpoints for one logical destination** (e.g. an active/standby PACS/RIS

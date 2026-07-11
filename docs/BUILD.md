@@ -27,6 +27,24 @@ against one engine and ship an extension declaring another, which surfaces as a 
 server, far from the cause. The script now derives the image from the version and hard-fails if the image's own
 `conf/mirth.properties` version disagrees, so this can't happen by accident.
 
+### Pinning the engine image
+Three levels, and only one is actually pinned:
+
+| Ref | Reproducible? |
+|---|---|
+| `:latest` | **No.** Moves on every release. Never use it. |
+| `:4.5.2-alpine` | By convention only — a tag is a mutable pointer and can be re-pushed. Fine for humans reading docs. |
+| `@sha256:…` | **Yes.** The image's content address; it cannot change under you. |
+
+**CI and `docker/oie-test.compose.yaml` pin by digest** so a green build always means the same engine, and a
+behavior test isn't a coin flip. The scripts above still take a readable version tag — they're backed by the
+version check, which catches the mismatch that actually hurts. To move to a new engine: update the digest and
+`mc-version` in `.github/workflows/build.yml` **together**, plus `<mc.version>` in `pom.xml`. Get a digest with:
+
+```bash
+docker buildx imagetools inspect openintegrationengine/engine:<tag>   # -> Digest: sha256:...
+```
+
 That installs, as `provided`-scope (`com.mirth.connect:<id>:<mc.version>`):
 
 | artifact | provides |
