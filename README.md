@@ -72,6 +72,11 @@ Read before deploying — these follow from how MLLP/TCP actually behave:
   (`SENT: … [sent to host:port]`) and on the connector-map key `tcpmultiEndpoint`.
 
   ![Response view showing the endpoint that handled the message](docs/images/destination-response.png)
+- **The active failover config, per message:** the message browser's *Sent* view shows the strategy and
+  endpoint list that were in effect (this is a display-only annotation — the bytes on the wire are the
+  message unchanged).
+
+  ![Sent view showing the strategy and endpoint list](docs/images/destination-sent.png)
 - **Seeing failover in the log:** endpoint **DOWN / RECOVERED** transitions log at `WARN`, once per
   transition (not per message). OIE's default root log level suppresses these; to see them, add to
   `conf/log4j2.properties`:
