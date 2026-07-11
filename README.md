@@ -61,6 +61,11 @@ Read before deploying — these follow from how MLLP/TCP actually behave:
   (a dead / blackholed node)**, or a misconfigured address/port. Nothing was written, so moving to another
   endpoint is safe. On any **post-write** outcome (write error, or an **ACK-read timeout** = lost ACK) it does
   **not** move — it returns the message so the queue retries the **same** endpoint.
+- **A NACK is not a failover trigger.** An `MSA|AE` (application reject) means the receiver *got* the message
+  and rejected it — the connector passes the response through unchanged (no failover, endpoint stays
+  healthy), and the channel's response validation marks the message `ERROR`. That's the right outcome: a
+  rejected message surfaces as `ERROR` rather than being re-routed to another endpoint that would reject it
+  too (or receive a duplicate).
 - **Duplicate semantics are the same as the stock TCP Sender.** MLLP delivery is at-least-once: a lost ACK
   makes the queue retry, so a receiver can see a message twice — equally true of the plain TCP Sender. Because
   failover is connect-phase-only, this plugin adds **no cross-endpoint duplication**.
